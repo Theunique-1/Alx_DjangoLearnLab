@@ -5,11 +5,11 @@ author = Author.objects.get(name = author_name)
 books_by_author = Book.objects.filter(author = author)
 
 
-Library_name = "School Library"
-library = Library.objects.get(name = Library_name)
+library_name = "School Library"
+library = Library.objects.get(name = library_name)
 books_in_library = library.books.all()
 
 
 Librarian_library_name = "School Library"
 Librarian_library = library.objects.get(name = Librarian_library_name)
-librarian = Librarian_library
+librarian = Librarian_library_name
