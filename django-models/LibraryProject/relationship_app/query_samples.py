@@ -22,7 +22,7 @@ def get_librarians_in_library(library_name):
     """Retrieves librarians in a given library."""
     try:
         library = Library.objects.get(name=library_name)
-        return Librarian.objects.filter(library=library)
+        return Librarian.objects.get(library=library)
     except Library.DoesNotExist:
         print(f"Library '{library_name}' not found.")
         return []
