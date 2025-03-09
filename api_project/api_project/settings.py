@@ -135,4 +135,4 @@ REST_FRAMEWORK = {
     ],
 }
 
-rest_framework.permissions.Isauthenticated
+#rest_framework.permissions.Isauthenticated
