@@ -3,6 +3,7 @@ from rest_framework import generics, serializers, permissions
 from .models import Book
 from .serializers import BookSerializer
 from datetime import datetime
+from .permissions import IsAuthorOrReadOnly
 
 # Create your views here.
 
@@ -33,7 +34,7 @@ class BookCreateView(generics.CreateAPIView):   # View to create a new book with
 class BookUpdateView(generics.UpdateAPIView):  # To update an existing book with custom validation
     queryset = Book.objects.all()
     serializer_class = BookSerializer
-    permission_classes = [permissions.IsAuthenticated] # Only logged in user can update
+    permission_classes = [permissions.IsAuthenticated, IsAuthorOrReadOnly] # Only logged in user can update
 
     def perform_update(self, serializer):
         publication_year = serializer.validated_data.get('publication_year', serializer.instance.publication_year)
