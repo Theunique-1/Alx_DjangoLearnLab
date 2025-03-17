@@ -5,6 +5,7 @@ from .serializers import BookSerializer
 from datetime import datetime
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework
 
 # Create your views here.
 
@@ -12,7 +13,7 @@ class BookListView(generics.ListAPIView): # view to list and filter all books
     queryset = Book.objects.all() # Get all book object
     serializer_class = BookSerializer # BookSerializer to convert Book objects to JSON
     permission_classes = [permissions.AllowAny]  # Allow anyone to view
-    
+
     filter_backends = [DjangoFilterBackend] #Use DjangoFilterBackend for filtering
     filterset_fields = ['title', 'author', 'publication_year'] # Define fields that can be used for filtering
     search_fields = ['title', 'author_name'] # Define searchable fields
