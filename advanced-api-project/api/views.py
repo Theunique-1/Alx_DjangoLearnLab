@@ -14,7 +14,7 @@ class BookListView(generics.ListAPIView): # view to list and filter all books
     serializer_class = BookSerializer # BookSerializer to convert Book objects to JSON
     permission_classes = [permissions.AllowAny]  # Allow anyone to view
 
-    filter_backends = [DjangoFilterBackend] #Use DjangoFilterBackend for filtering
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter] #Use DjangoFilterBackend for filtering
     filterset_fields = ['title', 'author', 'publication_year'] # Define fields that can be used for filtering
     search_fields = ['title', 'author_name'] # Define searchable fields
     ordering_fields = ['title', 'publication_year']
