@@ -50,7 +50,7 @@ def profile(request):
         form = CustomUserChangeForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
-            return redirect('profile')
+            return redirect('profile') # redirecting to profile after successul update
     else:
         form = CustomUserChangeForm(instance=user)
     return render(request, 'blog/profile.html', {'form': form})
