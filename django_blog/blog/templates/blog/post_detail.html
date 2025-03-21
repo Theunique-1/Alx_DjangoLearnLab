@@ -29,11 +29,7 @@
 
     {% if user.is_authenticated %}
     <h3>Add a Comment</h3>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Submit</button>
-    </form>
+    <a href="{% url 'comment_create' post.pk %}">Add Comment</a>
     {% else %}
     <p><a href="{% url 'login' %}">Login</a> to add a comment.</p>
     {% endif %}
