@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import User
+from .models import Post
 
 class CustomUserCreationForm(UserCreationForm):
     """Form for user registration, extending Django's UserCreationForm."""
@@ -34,3 +35,9 @@ class CustomUserChangeForm(UserChangeForm):
         if commit:
             user_profile.save()
         return user
+    
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ['title', 'content']
