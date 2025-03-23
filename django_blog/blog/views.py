@@ -69,9 +69,10 @@ def post_search(request):
     results = None
     if query:
         results = Post.objects.filter(
-            Q(title_icontains=query) | Q(tags__name__icontains=query) | Q(content__icontains=query)
+            Q(title__icontains=query) | Q(tags__name__icontains=query) | Q(content__icontains=query)
         ).distinct()
     return render(request, 'blog/post_search.html', {'results': results, 'query': query})
+
 
 def posts_by_tag(request, tag_name):
     tag = get_object_or_404(Tag, name=tag_name)

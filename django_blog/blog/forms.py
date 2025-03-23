@@ -8,18 +8,14 @@ class TagWidget(forms.CheckboxSelectMultiple):
         super()._init_(*args, **kwargs)
         self.choices = [(tag.id, tag.name) for tag in Tag.objects.all()]
 
-
 class CustomUserCreationForm(UserCreationForm):
-    """Form for user registration, extending Django's UserCreationForm."""
     email = forms.EmailField(required=True)
 
     class Meta:
         model = User
         fields = UserCreationForm.Meta.fields + ('email',)
 
-
 class CustomUserChangeForm(UserChangeForm):
-    """Form for user profile editing, extending Django's UserChangeForm."""
     bio = forms.CharField(widget=forms.Textarea, required=False)
     profile_picture = forms.ImageField(required=False)
 
@@ -41,7 +37,6 @@ class CustomUserChangeForm(UserChangeForm):
         if commit:
             user.save()
         return user
-    
 
 class PostForm(forms.ModelForm):
     tags = forms.MultipleChoiceField(
@@ -64,6 +59,6 @@ class CommentForm(forms.ModelForm):
 
     def clean_content(self):
         content = self.cleaned_data.get('content')
-        if not content or len(content.strip()) < 10:  # Example: minimum 10 characters
+        if not content or len(content.strip()) < 10:
             raise forms.ValidationError('Comment must be at least 5 characters long.')
         return content
