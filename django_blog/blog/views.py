@@ -66,14 +66,11 @@ def profile(request):
 
 def post_search(request):
     query = request.GET.get('q')
-    results = []
-
+    results = None
     if query:
         results = Post.objects.filter(
-            Q(title_icontains=query) | Q(contenticontains=query) | Q(tagsname_icontains=query)
+            Q(title_icontains=query) | Q(tagsnameicontains=query) | Q(content_icontains=query)
         ).distinct()
-    else:
-        results = None
     return render(request, 'blog/post_search.html', {'results': results, 'query': query})
 
 def posts_by_tag(request, tag_name):
