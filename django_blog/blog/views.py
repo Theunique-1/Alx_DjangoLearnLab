@@ -8,8 +8,9 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .models import Post
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from .models import Post, Comment
+from .models import Post, Comment, Tag, PostTag
 from .forms import CommentForm
+from django.db.models import Q
 
 
 
@@ -21,8 +22,8 @@ def register(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            return redirect('home')
+            login(request, user) # Log in the user after registration
+            return redirect('profile') # Redirect to profile page
     else:
         form = CustomUserCreationForm()
     return render(request, 'blog/register.html', {'form': form})
@@ -37,7 +38,7 @@ def login_view(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('home')
+                return redirect('profile')
             else:
                 return render(request, 'blog/login.html', {'form': form, 'error': "Invalid username or password"})
     else:
@@ -62,6 +63,24 @@ def profile(request):
         form = CustomUserChangeForm(instance=user)
     return render(request, 'blog/profile.html', {'form': form})
 
+
+def post_search(request):
+    query = request.GET.get('q')
+    results = []
+
+    if query:
+        results = Post.objects.filter(
+            Q(title_icontains=query) | Q(contenticontains=query) | Q(tagsname_icontains=query)
+        ).distinct()
+    else:
+        results = None
+    return render(request, 'blog/post_search.html', {'results': results, 'query': query})
+
+def posts_by_tag(request, tag_name):
+    tag = get_object_or_404(Tag, name=tag_name)
+    posts = Post.objects.filter(tags=tag)
+    return render(request, 'blog/post_list.html', {'posts': posts})
+
 class PostListView(ListView):
     model = Post
     template_name = 'blog/post_list.html'
@@ -72,29 +91,42 @@ class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
 
+
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
-    fields = ['title', 'content']
     form_class = PostForm
     template_name = 'blog/post_form.html'
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        tags = self.request.POST.getlist('tags')
+        for tag_id in tags:
+            PostTag.objects.create(post=self.object, tag_id=tag_id)
+        return response
 
 class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Post
-    fields = ['title', 'content']
     form_class = PostForm
     template_name = 'blog/post_form.html'
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        PostTag.objects.filter(post=self.object).delete()
+        tags = self.request.POST.getlist('tags')
+        for tag_id in tags:
+            PostTag.objects.create(post=self.object, tag_id=tag_id)
+        return response
 
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tags'] = Tag.objects.all()
+        return context
+
 
 class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Post
@@ -104,6 +136,11 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tags'] = Tag.objects.all()
+        return context
     
 
 

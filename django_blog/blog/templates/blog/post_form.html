@@ -2,10 +2,18 @@
 
 {% block content %}
 <div class="content">
-    <h2>{% if form.instance.pk %}Update{% else %}Create{% endif %} Post</h2>
+    <h2>{% if form.instance.pk %}Edit Post{% else %}Create Post{% endif %}</h2>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
+        <div>
+            <label for="tags">Tags:</label>
+            {% for tag in tags %}
+                <input type="checkbox" name="tags" value="{{ tag.id }}" id="tag_{{ tag.id }}"
+                    {% if tag in form.instance.tags.all %}checked{% endif %}>
+                <label for="tag_{{ tag.id }}">{{ tag.name }}</label>
+            {% endfor %}
+        </div>
         <button type="submit">Submit</button>
     </form>
 </div>
