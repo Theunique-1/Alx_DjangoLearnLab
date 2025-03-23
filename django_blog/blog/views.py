@@ -1,18 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
-from .forms import CustomUserCreationForm, CustomUserChangeForm, PostForm
+from .forms import CustomUserCreationForm, CustomUserChangeForm, PostForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Post
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
 from .models import Post, Comment, Tag, PostTag
-from .forms import CommentForm
+from django.urls import reverse_lazy
 from django.db.models import Q
-
-
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
 # Create your views here.
 
@@ -22,8 +18,8 @@ def register(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user) # Log in the user after registration
-            return redirect('profile') # Redirect to profile page
+            login(request, user)  # Log in the user after registration
+            return redirect('profile')  # Redirect to profile page
     else:
         form = CustomUserCreationForm()
     return render(request, 'blog/register.html', {'form': form})
@@ -58,26 +54,35 @@ def profile(request):
         form = CustomUserChangeForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
-            return redirect('profile') # redirecting to profile after successul update
+            return redirect('profile')  # redirecting to profile after successul update
     else:
         form = CustomUserChangeForm(instance=user)
     return render(request, 'blog/profile.html', {'form': form})
-
 
 def post_search(request):
     query = request.GET.get('q')
     results = None
     if query:
         results = Post.objects.filter(
-            Q(title__icontains=query) | Q(tags__name__icontains=query) | Q(content__icontains=query)
+            Q(title_icontains=query) | Q(tagsnameicontains=query) | Q(content_icontains=query)
         ).distinct()
     return render(request, 'blog/post_search.html', {'results': results, 'query': query})
 
+class PostByTagListView(ListView):
+    model = Post
+    template_name = 'blog/post_list.html'
+    context_object_name = 'posts'
 
-def posts_by_tag(request, tag_name):
-    tag = get_object_or_404(Tag, name=tag_name)
-    posts = Post.objects.filter(tags=tag)
-    return render(request, 'blog/post_list.html', {'posts': posts})
+    def get_queryset(self):
+        tag_slug = self.kwargs['tag_slug']
+        tag = get_object_or_404(Tag, name=tag_slug)
+        return Post.objects.filter(tags=tag)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tag_slug = self.kwargs['tag_slug']
+        context['tag'] = get_object_or_404(Tag, name=tag_slug)
+        return context
 
 class PostListView(ListView):
     model = Post
@@ -88,7 +93,6 @@ class PostListView(ListView):
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
-
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
@@ -119,12 +123,11 @@ class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['tags'] = Tag.objects.all()
         return context
-
 
 class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Post
@@ -134,15 +137,11 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['tags'] = Tag.objects.all()
         return context
-    
-
-
-
 
 def post_detail(request, pk):
     post = get_object_or_404(Post, pk=pk)
@@ -185,8 +184,7 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return self.request.user == comment.author
 
     def get_success_url(self):
-        return reverse_lazy('post_detail', kwargs={'pk': self.object.post.pk}) 
-
+        return reverse_lazy('post_detail', kwargs={'pk': self.object.post.pk})
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     model = Comment

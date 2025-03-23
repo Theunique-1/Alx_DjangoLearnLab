@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import PostListView, PostDetailView, PostCreateView, PostUpdateView, PostDeleteView, CommentUpdateView, CommentDeleteView, CommentCreateView
+from .views import PostListView, PostDetailView, PostCreateView, PostUpdateView, PostDeleteView, CommentUpdateView, CommentDeleteView, CommentCreateView, PostByTagListView
 
 urlpatterns = [
     path('register/', views.register, name='register'),
@@ -19,7 +19,7 @@ urlpatterns = [
     path('comment/<int:pk>/update/', CommentUpdateView.as_view(), name='comment_update'),
     path('comment/<int:pk>/delete/', CommentDeleteView.as_view(), name='comment_delete'),
     path('post/<int:pk>/comments/new/', CommentCreateView.as_view(), name='comment_create'),
-    path('tags/<str:tag_name>/', views.posts_by_tag, name='posts_by_tag'),
+    path('tags/<slug:tag_slug>/', PostByTagListView.as_view(), name='posts_by_tag'), # Corrected tag url.
     path('search/', views.post_search, name='post_search'),
     path('profile/', views.profile, name='profile'),
 ]
