@@ -3,6 +3,12 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import User
 from .models import Post, Comment, Tag
 
+class TagWidget(forms.CheckboxSelectMultiple):
+    def _init_(self, *args, **kwargs):
+        super()._init_(*args, **kwargs)
+        self.choices = [(tag.id, tag.name) for tag in Tag.objects.all()]
+
+
 class CustomUserCreationForm(UserCreationForm):
     """Form for user registration, extending Django's UserCreationForm."""
     email = forms.EmailField(required=True)
@@ -38,10 +44,15 @@ class CustomUserChangeForm(UserChangeForm):
     
 
 class PostForm(forms.ModelForm):
-  
+    tags = forms.MultipleChoiceField(
+        choices=[],
+        widget=TagWidget(),
+        required=False,
+    )
+
     class Meta:
         model = Post
-        fields = ['title', 'content', 'tags']
+        fields = ['title', 'content', 'published_date']
 
 class CommentForm(forms.ModelForm):
     class Meta:

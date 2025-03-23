@@ -7,12 +7,8 @@
         {% csrf_token %}
         {{ form.as_p }}
         <div>
-            <label for="tags">Tags:</label>
-            {% for tag in tags %}
-                <input type="checkbox" name="tags" value="{{ tag.id }}" id="tag_{{ tag.id }}"
-                    {% if tag in form.instance.tags.all %}checked{% endif %}>
-                <label for="tag_{{ tag.id }}">{{ tag.name }}</label>
-            {% endfor %}
+            <label for="id_tags">Tags:</label>
+            {{ form.tags }}
         </div>
         <button type="submit">Submit</button>
     </form>
