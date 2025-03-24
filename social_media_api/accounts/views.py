@@ -69,6 +69,6 @@ class UnfollowUser(generics.GenericAPIView):
         return Response({"detail": f"You have unfollowed {user_to_unfollow.username}."}, status=status.HTTP_200_OK)
 
 class ListUsers(generics.ListAPIView):
-    queryset = User.objects.all()
+    queryset = get_user_model().objects.all()
     serializer_class = get_user_model()
     permission_classes = [permissions.IsAuthenticated]
