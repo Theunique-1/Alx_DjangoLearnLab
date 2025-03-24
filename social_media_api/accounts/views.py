@@ -50,8 +50,8 @@ class UserProfile(APIView):
         return Response(serializer.data)
     
 
-class FollowUser(APIView):
-    permission_classes = [IsAuthenticated]
+class FollowUser(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, user_id):
         user_to_follow = get_object_or_404(User, id=user_id)
@@ -60,10 +60,15 @@ class FollowUser(APIView):
         request.user.followers.add(user_to_follow)
         return Response({"detail": f"You are now following {user_to_follow.username}."}, status=status.HTTP_200_OK)
 
-class UnfollowUser(APIView):
-    permission_classes = [IsAuthenticated]
+class UnfollowUser(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, user_id):
         user_to_unfollow = get_object_or_404(User, id=user_id)
         request.user.followers.remove(user_to_unfollow)
         return Response({"detail": f"You have unfollowed {user_to_unfollow.username}."}, status=status.HTTP_200_OK)
+
+class ListUsers(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = get_user_model()
+    permission_classes = [permissions.IsAuthenticated]
