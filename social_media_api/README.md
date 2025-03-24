@@ -1,6 +1,6 @@
-Social Media API - Accounts Service
 
-This document provides details on setting up and using the accounts service of the Social Media API.
+
+Details on setting up and using the accounts service of the Social Media API.
 
 ## Setup Process
 
@@ -243,3 +243,268 @@ The CustomUser model extends Django's AbstractUser to include the following fiel
 * followers: A ManyToMany field representing user followers.
 * groups: A ManyToMany field to manage user groups.
 * user_permissions: A ManyToMany field to assign specific user permissions.
+
+
+ Posts and Comments Service
+
+API endpoints for managing posts and comments within the Social Media API.
+
+## Setup (Assuming Accounts Service is Already Setup)
+
+1.  **Create posts App:**
+
+    bash
+    python manage.py startapp posts
+    
+
+2.  **Add posts to INSTALLED_APPS in social_media_api/settings.py:**
+
+    python
+    INSTALLED_APPS = [
+        # ...
+        'posts',
+    ]
+    
+
+3.  **Define Models (posts/models.py):**
+
+    python
+    from django.db import models
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    class Post(models.Model):
+        author = models.ForeignKey(User, on_delete=models.CASCADE)
+        title = models.CharField(max_length=200)
+        content = models.TextField()
+        created_at = models.DateTimeField(auto_now_add=True)
+        updated_at = models.DateTimeField(auto_now=True)
+
+        def __str__(self):
+            return self.title
+
+    class Comment(models.Model):
+        post = models.ForeignKey(Post, on_delete=models.CASCADE)
+        author = models.ForeignKey(User, on_delete=models.CASCADE)
+        content = models.TextField()
+        created_at = models.DateTimeField(auto_now_add=True)
+        updated_at = models.DateTimeField(auto_now=True)
+
+        def __str__(self):
+            return self.content
+    
+
+4.  **Create Serializers (posts/serializers.py):**
+
+    python
+    from rest_framework import serializers
+    from .models import Post, Comment
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    class PostSerializer(serializers.ModelSerializer):
+        author = serializers.ReadOnlyField(source='author.username')
+
+        class Meta:
+            model = Post
+            fields = ('id', 'author', 'title', 'content', 'created_at', 'updated_at')
+
+    class CommentSerializer(serializers.ModelSerializer):
+        author = serializers.ReadOnlyField(source='author.username')
+
+        class Meta:
+            model = Comment
+            fields = ('id', 'post', 'author', 'content', 'created_at', 'updated_at')
+    
+
+5.  **Create Views (posts/views.py):**
+
+    python
+    from rest_framework import viewsets, permissions, filters
+    from .models import Post, Comment
+    from .serializers import PostSerializer, CommentSerializer
+    from .permissions import IsAuthorOrReadOnly
+    from rest_framework.pagination import PageNumberPagination
+
+    class PostPagination(PageNumberPagination):
+        page_size = 10
+        page_size_query_param = 'page_size'
+        max_page_size = 100
+
+    class CommentPagination(PageNumberPagination):
+        page_size = 20
+        page_size_query_param = 'page_size'
+        max_page_size = 100
+
+    class PostViewSet(viewsets.ModelViewSet):
+        queryset = Post.objects.all()
+        serializer_class = PostSerializer
+        permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+        pagination_class = PostPagination
+        filter_backends = [filters.SearchFilter]
+        search_fields = ['title', 'content']
+
+        def perform_create(self, serializer):
+            serializer.save(author=self.request.user)
+
+    class CommentViewSet(viewsets.ModelViewSet):
+        queryset = Comment.objects.all()
+        serializer_class = CommentSerializer
+        permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+        pagination_class = CommentPagination
+
+        def perform_create(self, serializer):
+            serializer.save(author=self.request.user)
+    
+
+6.  **Create Permissions (posts/permissions.py):**
+
+    python
+    from rest_framework import permissions
+
+    class IsAuthorOrReadOnly(permissions.BasePermission):
+        def has_object_permission(self, request, view, obj):
+            if request.method in permissions.SAFE_METHODS:
+                return True
+            return obj.author == request.user
+    
+
+7.  **Create URLs (posts/urls.py):**
+
+    python
+    from rest_framework.routers import DefaultRouter
+    from .views import PostViewSet, CommentViewSet
+
+    router = DefaultRouter()
+    router.register(r'posts', PostViewSet, basename='post')
+    router.register(r'comments', CommentViewSet, basename='comment')
+
+    urlpatterns = router.urls
+    
+
+8.  **Include Posts URLs in Project (social_media_api/urls.py):**
+
+    python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('accounts/', include('accounts.urls')),
+        path('posts/', include('posts.urls')),
+    ]
+    
+
+9.  *Run Migrations:*
+
+    bash
+    python manage.py makemigrations posts
+    python manage.py migrate
+    
+
+## Posts Endpoints
+
+### List Posts
+
+* *Endpoint:* GET /posts/posts/
+* *Method:* GET
+* *Headers:* (None Required)
+* *Query Parameters:*
+    * page: Page number (e.g., ?page=2)
+    * page_size: Number of items per page (e.g., ?page_size=10)
+    * search: Search posts by title or content (e.g., ?search=example)
+* *Response:*
+
+    json
+    {
+        "count": 100,
+        "next": "[http://127.0.0.1:8000/posts/posts/?page=2](https://www.google.com/search?q=http://127.0.0.1:8000/posts/posts/%3Fpage%3D2)",
+        "previous": null,
+        "results": [
+            {
+                "id": 1,
+                "author": "user1",
+                "title": "Example Post",
+                "content": "This is an example post.",
+                "created_at": "2023-10-27T10:00:00Z",
+                "updated_at": "2023-10-27T10:00:00Z"
+            },
+            // ... more posts
+        ]
+    }
+    
+
+### Create Post
+
+* *Endpoint:* POST /posts/posts/
+* *Method:* POST
+* *Headers:*
+    * Content-Type: application/json
+    * Authorization: Token <your_token>
+* *Body:*
+
+    json
+    {
+        "title": "New Post",
+        "content": "This is a new post."
+    }
+    
+
+* *Response:*
+
+    json
+    {
+        "id": 101,
+        "author": "user1",
+        "title": "New Post",
+        "content": "This is a new post.",
+        "created_at": "2023-10-27T10:30:00Z",
+        "updated_at": "2023-10-27T10:30:00Z"
+    }
+    
+
+### Update Post
+
+* *Endpoint:* PUT /posts/posts/{post_id}/
+* *Method:* PUT
+* *Headers:*
+    * Content-Type: application/json
+    * Authorization: Token <your_token>
+* *Body:*
+
+    json
+    {
+        "title": "Updated Post",
+        "content": "This post has been updated."
+    }
+    
+
+* *Response:* (Updated post object)
+
+### Delete Post
+
+* *Endpoint:* DELETE /posts/posts/{post_id}/
+* *Method:* DELETE
+* *Headers:*
+    * Authorization: Token <your_token>
+* *Response:* 204 No Content
+
+## Comments Endpoints
+
+### List Comments
+
+* *Endpoint:* GET /posts/comments/
+* *Method:* GET
+* *Headers:* (None Required)
+* *Query Parameters:* (Pagination: page, page_size)
+* *Response:* (Paginated list of comments)
+
+### Create Comment
+
+* *Endpoint:* POST /posts/comments/
+* *Method:* POST
+* *Headers:*
+    * Content-Type: application/json
+    * `Authorization: Token <your
