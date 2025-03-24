@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework.authtoken.models import Token
 
-User = get_user_model()
+User = get_user_model().objects.create_user
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,5 +34,5 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = validated_data['user']
-        token = Token.objects.create(user=user) # Changed to explicitly create the token.
+        token = Token.objects.create(user=user)
         return token
