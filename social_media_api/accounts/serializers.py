@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User.objects.create_user(*validated_data) # changed from User(*validated_data)
+        user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
         return user
@@ -34,5 +34,5 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
+        token = Token.objects.create(user=user) # Changed to explicitly create the token.
         return token
