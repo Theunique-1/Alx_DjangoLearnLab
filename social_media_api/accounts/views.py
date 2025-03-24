@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions, status
 from django.shortcuts import get_object_or_404
+from .models import CustomUser
 
 
 # Create your views here.
@@ -69,6 +70,6 @@ class UnfollowUser(generics.GenericAPIView):
         return Response({"detail": f"You have unfollowed {user_to_unfollow.username}."}, status=status.HTTP_200_OK)
 
 class ListUsers(generics.ListAPIView):
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = get_user_model()
     permission_classes = [permissions.IsAuthenticated]
