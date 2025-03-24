@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 class CustomUser(AbstractUser):
     bio = models.TextField(blank=True)
     profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    followers = models.ManyToManyField('self', symmetrical=False, blank=True)
+    followers = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='following')
     groups = models.ManyToManyField(
         Group,
         verbose_name=_('groups'),

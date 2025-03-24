@@ -508,3 +508,224 @@ API endpoints for managing posts and comments within the Social Media API.
 * *Headers:*
     * Content-Type: application/json
     * `Authorization: Token <your
+
+
+# Social Media API - Follows and Feed Service
+
+Details of the API endpoints for managing user follows and accessing the user feed within the Social Media API.
+
+## Setup (Assuming Posts and Accounts Services are Already Setup)
+
+1.  **Modify accounts/models.py:**
+
+    * Add the followers field to the CustomUser model:
+
+        python
+        from django.contrib.auth.models import AbstractUser
+        from django.db import models
+        from django.contrib.auth.models import Group, Permission
+        from django.utils.translation import gettext_lazy as _
+
+        class CustomUser(AbstractUser):
+            bio = models.TextField(blank=True)
+            profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+            followers = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='following')
+            groups = models.ManyToManyField(
+                Group,
+                verbose_name=_('groups'),
+                blank=True,
+                help_text=_(
+                    'The groups this user belongs to. A user will get all permissions '
+                    'granted to each of their groups.'
+                ),
+                related_name="customuser_set",
+                related_query_name="user",
+            )
+            user_permissions = models.ManyToManyField(
+                Permission,
+                verbose_name=_('user permissions'),
+                blank=True,
+                help_text=_('Specific permissions for this user.'),
+                related_name="customuser_set",
+                related_query_name="user",
+            )
+
+            def __str__(self):
+                return self.username
+        
+
+2.  *Run Migrations:*
+
+    bash
+    python manage.py makemigrations accounts
+    python manage.py migrate
+    
+
+3.  **Create Follow/Unfollow Views (accounts/views.py):**
+
+    python
+    from rest_framework import status
+    from rest_framework.response import Response
+    from rest_framework.views import APIView
+    from rest_framework.permissions import IsAuthenticated
+    from django.shortcuts import get_object_or_404
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    # ... (other views)
+
+    class FollowUser(APIView):
+        permission_classes = [IsAuthenticated]
+
+        def post(self, request, user_id):
+            user_to_follow = get_object_or_404(User, id=user_id)
+            if request.user == user_to_follow:
+                return Response({"detail": "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+            request.user.followers.add(user_to_follow)
+            return Response({"detail": f"You are now following {user_to_follow.username}."}, status=status.HTTP_200_OK)
+
+    class UnfollowUser(APIView):
+        permission_classes = [IsAuthenticated]
+
+        def post(self, request, user_id):
+            user_to_unfollow = get_object_or_404(User, id=user_id)
+            request.user.followers.remove(user_to_unfollow)
+            return Response({"detail": f"You have unfollowed {user_to_unfollow.username}."}, status=status.HTTP_200_OK)
+    
+
+4.  **Create Feed View (posts/views.py):**
+
+    python
+    from rest_framework import viewsets, permissions, filters, generics
+    from .models import Post, Comment
+    from .serializers import PostSerializer, CommentSerializer
+    from rest_framework.pagination import PageNumberPagination
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    # ... (other views)
+
+    class UserFeedView(generics.ListAPIView):
+        serializer_class = PostSerializer
+        permission_classes = [permissions.IsAuthenticated]
+
+        def get_queryset(self):
+            user = self.request.user
+            following_users = user.followers.all()
+            return Post.objects.filter(author__in=following_users).order_by('-created_at')
+    
+
+5.  **Create URLs (accounts/urls.py and posts/urls.py):**
+
+    * accounts/urls.py:
+
+        python
+        from django.urls import path
+        from .views import UserCreate, UserLogin, GetToken, UserProfile, FollowUser, UnfollowUser
+
+        urlpatterns = [
+            # ... (other paths)
+            path('follow/<int:user_id>/', FollowUser.as_view(), name='follow_user'),
+            path('unfollow/<int:user_id>/', UnfollowUser.as_view(), name='unfollow_user'),
+        ]
+        
+
+    * posts/urls.py:
+
+        python
+        from rest_framework.routers import DefaultRouter
+        from .views import PostViewSet, CommentViewSet, UserFeedView
+        from django.urls import path
+
+        router = DefaultRouter()
+        router.register(r'posts', PostViewSet, basename='post')
+        router.register(r'comments', CommentViewSet, basename='comment')
+
+        urlpatterns = [
+            path('feed/', UserFeedView.as_view(), name='user_feed'),
+        ]
+
+        urlpatterns += router.urls
+        
+
+6.  **Update social_media_api/urls.py:**
+
+    python
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('admin/', admin.site.urls),
+        path('api/accounts/', include('accounts.urls')),
+        path('api/posts/', include('posts.urls')),
+    ]
+    
+
+## Follows Endpoints
+
+### Follow User
+
+* *Endpoint:* POST /api/accounts/follow/{user_id}/
+* *Method:* POST
+* *Headers:*
+    * Authorization: Token <your_token>
+* *Path Parameters:*
+    * user_id: The ID of the user to follow.
+* *Response:*
+
+    json
+    {
+        "detail": "You are now following {username}."
+    }
+    
+
+### Unfollow User
+
+* *Endpoint:* POST /api/accounts/unfollow/{user_id}/
+* *Method:* POST
+* *Headers:*
+    * Authorization: Token <your_token>
+* *Path Parameters:*
+    * user_id: The ID of the user to unfollow.
+* *Response:*
+
+    json
+    {
+        "detail": "You have unfollowed {username}."
+    }
+    
+
+## Feed Endpoint
+
+### Get User Feed
+
+* *Endpoint:* GET /api/posts/feed/
+* *Method:* GET
+* *Headers:*
+    * Authorization: Token <your_token>
+* *Response:*
+
+    json
+    [
+        {
+            "id": 1,
+            "author": "followed_user1",
+            "title": "Post from followed user",
+            "content": "Content of the post.",
+            "created_at": "2023-10-27T10:00:00Z",
+            "updated_at": "2023-10-27T10:00:00Z"
+        },
+        // ... more posts from followed users, ordered by creation date
+    ]
+    
+
+## Model Changes
+
+The CustomUser model in accounts/models.py has been updated to include a followers field:
+
+* **followers:**
+    * A ManyToMany field to self representing the users that the current user follows.
+    * symmetrical=False to allow unidirectional follows.
+    * related_name='following' to avoid reverse relation clashes.
